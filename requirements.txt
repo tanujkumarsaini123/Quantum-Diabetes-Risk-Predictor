@@ -1,5 +1,6 @@
-flask>=3.0
+streamlit>=1.40
 numpy>=1.26
 pandas>=2.0
 scikit-learn>=1.4
 pennylane>=0.38
+plotly>=5.0
