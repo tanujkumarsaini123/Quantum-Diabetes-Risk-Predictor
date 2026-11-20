@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Qubit Glucose · Early diabetes risk with quantum machine learning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<aside class="rail">
+  <div class="brand"><svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/><ellipse cx="16" cy="16" rx="13" ry="5" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".6"/><circle cx="23" cy="11" r="3" fill="var(--q)"/></svg><span>Qubit Glucose</span></div>
+  <nav id="nav">
+    <button data-view="assess" class="on">Assess risk</button>
+    <button data-view="history">Patient history</button>
+    <button data-view="lab">Model lab</button>
+  </nav>
+  <p class="rail-note">A 6-qubit variational circuit, trained on 768 clinical records stored in SQLite. Screening aid only, not a diagnosis.</p>
+</aside>
+
+<main>
+<!-- ASSESS -->
+<section id="view-assess" class="view on">
+  <header class="head"><h1>Check early diabetes risk</h1><p>Enter six routine measurements. The quantum circuit returns a risk estimate in about a second and shows which measurements pushed it up or down.</p></header>
+  <div class="split">
+    <form id="form" class="card form" autocomplete="off">
+      <div class="presets"><span>Try an example</span><button type="button" data-preset="low">Low-risk profile</button><button type="button" data-preset="high">High-risk profile</button></div>
+      <label class="text"><span>Patient name <i>(optional)</i></span><input name="patient_name" maxlength="60" placeholder="e.g. A. Sharma"></label>
+      <div id="fields"></div>
+      <details class="bmi"><summary>Calculate BMI from height and weight</summary>
+        <div class="bmi-row"><label>Height (cm)<input id="h" type="number" min="100" max="230" placeholder="170"></label><label>Weight (kg)<input id="wt" type="number" min="25" max="250" placeholder="72"></label><button type="button" id="bmiGo">Use BMI</button></div>
+      </details>
+      <button class="go" id="go" type="submit">Run quantum assessment</button>
+      <p class="err" id="err" role="alert"></p>
+    </form>
+
+    <div class="result card" id="result">
+      <div class="empty" id="empty">
+        <svg viewBox="0 0 220 120" width="220" aria-hidden="true"><path d="M20 110 A90 90 0 0 1 200 110" fill="none" stroke="var(--line)" stroke-width="14" stroke-linecap="round"/></svg>
+        <h2>Your result appears here</h2><p>Fill in the form and run the assessment, or load an example profile.</p>
+      </div>
+      <div id="running" class="running" hidden>
+        <svg id="wires" viewBox="0 0 320 150" width="100%" aria-label="Quantum circuit running"></svg>
+        <p>Encoding measurements into 6 qubits and entangling them…</p>
+      </div>
+      <div id="out" hidden>
+        <div class="gauge-wrap"><svg id="gauge" viewBox="0 0 240 140" aria-hidden="true"></svg>
+          <div class="gauge-text"><strong id="pct">0%</strong><span id="lvl" class="chip"></span></div></div>
+        <p id="verdict" class="verdict"></p>
+        <div class="vs"><div><small>Quantum model</small><div class="bar"><i id="qbar"></i></div><b id="qv"></b></div><div><small>Classical logistic regression</small><div class="bar c"><i id="cbar"></i></div><b id="cv"></b></div></div>
+        <h3>What moved this estimate</h3>
+        <p class="sub">Each qubit stands for one measurement. Bars show how much the risk changes versus a typical patient.</p>
+        <div id="qubits" class="qubits"></div>
+        <div id="steps" class="steps"></div>
+        <p class="saved" id="saved"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HISTORY -->
+<section id="view-history" class="view">
+  <header class="head row"><div><h1>Patient history</h1><p>Every assessment is saved to the local SQLite database.</p></div><a class="btn" href="/api/history.csv">Export CSV</a></header>
+  <div class="stats" id="stats"></div>
+  <div class="card tablecard"><div class="scroll"><table id="table"><thead><tr><th>Date</th><th>Patient</th><th>Glucose</th><th>BMI</th><th>Age</th><th>Quantum risk</th><th>Level</th><th></th></tr></thead><tbody></tbody></table></div><p id="noHist" class="empty-t" hidden>No assessments yet. Run one from “Assess risk” and it will be saved here.</p></div>
+</section>
+
+<!-- LAB -->
+<section id="view-lab" class="view">
+  <header class="head"><h1>Model lab</h1><p>How the quantum classifier is built, and how it compares with classical models on 154 held-out patients.</p></header>
+  <div class="card"><h2>The circuit</h2><p class="sub">Each measurement is encoded as a rotation on its own qubit, then entangling gates mix them. This block repeats 3 times (data re-uploading); qubit 1 is measured to produce the risk score.</p><div class="scroll"><svg id="circuit" viewBox="0 0 760 270" role="img" aria-label="Variational quantum circuit diagram"></svg></div></div>
+  <div class="grid2">
+    <div class="card"><h2>Quantum vs classical</h2><div id="cmp"></div></div>
+    <div class="card"><h2>Training loss</h2><p class="sub">Weighted cross-entropy per epoch.</p><svg id="loss" viewBox="0 0 360 200"></svg><h2 style="margin-top:22px">Quantum confusion matrix</h2><div id="cm" class="cm"></div></div>
+  </div>
+  <div class="card"><h2>Training runs in database</h2><div class="scroll"><table id="runs"><thead><tr><th>When</th><th>Model</th><th>Accuracy</th><th>ROC AUC</th><th>Recall</th><th>F1</th></tr></thead><tbody></tbody></table></div></div>
+</section>
+<footer class="disc">Qubit Glucose is an educational research prototype using the Pima Indians Diabetes dataset (women aged 21+). It is not a medical device. Talk to a clinician about any health concern.</footer>
+</main>
+<div id="toast" role="status"></div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
